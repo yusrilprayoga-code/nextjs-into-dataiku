@@ -1,0 +1,7 @@
+// This file is the descriptor for the Standard Web App Template tes1_t123
+{
+    "libraries": [],
+    "label": "Short description of tes1_t123",
+    "backendEnabled": true,
+    "autoStartBackend": false
+}
