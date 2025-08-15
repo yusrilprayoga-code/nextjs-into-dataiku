@@ -1,4 +1,87 @@
-<!-- Body of your web app  tes1_t123-->
-<h4>Welcome to your Web app</h4>
-<p>Edit your code in the HTML, CSS and JS tabs</p>
-<p>If needed, enable the Python backend in the Python tab</p>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Well Log Analysis</title>
+    <link id="favicon" rel="icon" href="" />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #app { height: 100%; }
+      #nxFrame { width: 100%; height: 100%; border: 0; display: block; }
+      body { overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <iframe
+        id="nxFrame"
+        title="Next.js App"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads"
+        referrerpolicy="no-referrer"
+      ></iframe>
+    </div>
+
+    <script>
+      (function () {
+        // Helper to build URLs to /resources with a local fallback (for local preview)
+        var _getResUrl = (typeof window.getWebAppResourceUrl === 'function')
+          ? window.getWebAppResourceUrl
+          : function (p) { p = (p || '').replace(/^\//, ''); return '/resources/' + p; };
+        function resUrl(p) { return _getResUrl(p); }
+
+        var frame = document.getElementById('nxFrame');
+        var baseOut = resUrl('out/');
+        if (!/\/$/.test(baseOut)) baseOut += '/';
+        var indexHtml = baseOut + 'dashboard.html'; // load dashboard by request
+        var indexTxt = baseOut + 'dashboard.txt';
+
+        document.getElementById('favicon').href = baseOut + 'favicon.ico';
+
+        function rewriteAndEmbed(fromUrl) {
+          fetch(fromUrl, { credentials: 'same-origin' })
+            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+            .then(function (html) {
+              var prefix = baseOut.replace(/\/$/, '');
+              // Rewrite absolute asset paths used by Next.js export (CSS/JS)
+              html = html.replace(/(src|href)=["']\/_next/gi, '$1="' + prefix + '/_next');
+              html = html.replace(/(src|href)=["']\/favicon\.ico/gi, '$1="' + prefix + '/favicon.ico');
+              // Generic rewrite: any root-absolute path not already handled -> prefix it
+              html = html.replace(/(src|href)=["']\/(?!resources\/|_next\/|favicon\.ico)([^"'>\s]+)/gi, function(_, attr, p){
+                return attr + '="' + prefix + '/' + p.replace(/^\//,'') + '"';
+              });
+              // Ensure a base tag so relative links resolve under resources/out/
+              if (!/<base\s/i.test(html)) {
+                html = html.replace(/<head(.*?)>/i, function (m) {
+                  return m + '<base href="' + baseOut + '">';
+                });
+              }
+              // Inject a small router shim so anchor clicks map to exported .html files
+              html = html.replace(/<\/body>/i, function (m) {
+                var shim = ''
+                  + '<script>(function(){'
+                  + 'var BASE=' + JSON.stringify(baseOut) + ';'
+                  + 'function norm(p){p=p||"";if(p.indexOf(BASE)===0)p=p.slice(BASE.length);if(p.indexOf("/")!==0)p="/"+p;return p;}'
+                  + 'function toHtmlUrl(path){path=norm(path);var s=path.replace(/^\\/+/,"");if(s==="")return BASE+"index.html";if(/\\\/$/.test(s))s+="index.html";if(!/\\\.[a-z0-9]+($|[?#])/i.test(s))s+=".html";return BASE+s;}'
+                  + 'function rewriteAnchors(){var as=document.querySelectorAll("a[href]");as.forEach(function(a){var href=a.getAttribute("href");if(!href||href.indexOf("#")==0)return;if(/^https?:\\\/\\\//i.test(href)||href.startsWith("mailto:")||href.startsWith("tel:"))return;a.setAttribute("href",toHtmlUrl(href));});}'
+                  + 'rewriteAnchors();'
+                  + 'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;var href=a.getAttribute("href");if(!href||href.indexOf("#")==0)return;if(/^https?:\\\/\\\//i.test(href)||href.startsWith("mailto:")||href.startsWith("tel:"))return;e.preventDefault();window.location.href=toHtmlUrl(href);},true);'
+                  + '})();<\/script>';
+                return shim + m;
+              });
+              frame.srcdoc = html;
+            })
+            .catch(function () { frame.src = baseOut + 'dashboard.html'; });
+        }
+        // Always rewrite so absolute paths are fixed; fall back to .txt if needed
+        rewriteAndEmbed(indexHtml);
+        // If that fails, the catch above will try the raw HTML path; we also attempt txt proactively after a tick
+        setTimeout(function(){
+          if (!frame.srcdoc && frame.src !== indexHtml) {
+            rewriteAndEmbed(indexTxt);
+          }
+        }, 500);
+      })();
+    </script>
+  </body>
+</html>

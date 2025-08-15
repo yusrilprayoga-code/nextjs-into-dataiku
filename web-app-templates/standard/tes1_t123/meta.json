@@ -1,7 +1,17 @@
-// This file is the descriptor for the Standard Web App Template tes1_t123
 {
-    "libraries": [],
-    "label": "Short description of tes1_t123",
-    "backendEnabled": true,
-    "autoStartBackend": false
+    "meta": {
+        "label": "Well Log Analysis",
+        "description": "A webapp for well log analysis and visualization",
+        "icon": "fas fa-chart-line"
+    },
+    "baseType": "STANDARD",
+    "hasBackend": "true",
+    "noJSSecurity": "false",
+    "standardWebAppLibraries": [
+        "jquery",
+        "dataiku"
+    ],
+    "hideWebAppConfig": "true",
+    "params": [],
+    "roles": []
 }
