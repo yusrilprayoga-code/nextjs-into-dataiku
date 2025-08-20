@@ -1,0 +1,13 @@
+{
+    "id": "react",
+    "version": "0.0.1",
+    "meta": {
+        "label": "React",
+        "description": "",
+        "author": "Yusril Prayoga",
+        "icon": "icon-puzzle-piece",
+        "tags": [],
+        "url": "",
+        "licenseInfo": "Apache Software License"
+    }
+}
