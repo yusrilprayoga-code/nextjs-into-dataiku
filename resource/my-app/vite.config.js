@@ -6,7 +6,8 @@ import react from '@vitejs/plugin-react-swc'
 // - build.outDir: output to `build/` so it matches plugin docs and symlink target
 export default defineConfig({
   plugins: [react()],
-  base: "../../resource/my-app/build/",
+  // Use relative base; we'll copy the entire build into webapps/react
+  base: './',
   build: {
     outDir: 'build',
     emptyOutDir: true,

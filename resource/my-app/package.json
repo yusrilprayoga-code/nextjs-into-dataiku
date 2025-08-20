@@ -6,7 +6,8 @@
   "homepage": "../../resource/my-app/build",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+  "build": "vite build && npm run postbuild",
+  "postbuild": "bash -lc 'cd ../.. && ./scripts/sync-body.sh'",
     "lint": "eslint .",
     "preview": "vite preview"
   },
