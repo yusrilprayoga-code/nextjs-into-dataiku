@@ -3,11 +3,22 @@
     "version": "0.0.1",
     "meta": {
         "label": "React",
-        "description": "",
+        "description": "A webapp for well log analysis and visualization",
         "author": "Yusril Prayoga",
         "icon": "icon-puzzle-piece",
         "tags": [],
         "url": "",
         "licenseInfo": "Apache Software License"
-    }
+    },
+    "baseType": "STANDARD",
+    "hasBackend": "true",
+    "noJSSecurity": "false",
+    "standardWebAppLibraries": [
+        "jquery",
+        "dataiku"
+    ],
+    "hideWebAppConfig": "true",
+    "params": [],
+    "roles": []
 }
+
