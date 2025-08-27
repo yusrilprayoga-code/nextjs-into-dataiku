@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs/promises';
 import * as xlsx from 'xlsx';
 
+export const dynamic = 'force-static';
+export const revalidate = 0;
+
 interface StructureDetails {
     field_name: string;
     structure_name: string;
@@ -17,7 +20,7 @@ interface StructureDetails {
         max?: number;
         count: number;
     }>;
-    sample_data: any[];
+    sample_data: Array<Record<string, unknown>>;
     data_types: Record<string, string>;
 }
 
@@ -27,7 +30,7 @@ async function getStructureDetails(fieldName: string, structureName: string): Pr
     
     try {
         await fs.access(structurePath);
-    } catch (error) {
+    } catch {
         throw new Error(`Structure file not found: ${structurePath}`);
     }
 
@@ -36,7 +39,7 @@ async function getStructureDetails(fieldName: string, structureName: string): Pr
         const workbook = xlsx.read(file, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const data: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        const data: unknown[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
         if (data.length === 0) {
             throw new Error('Empty Excel file');
@@ -56,16 +59,16 @@ async function getStructureDetails(fieldName: string, structureName: string): Pr
         }
 
         // Convert to objects for easier processing
-        const records = data.slice(1).map(row => {
-            const obj: any = {};
+        const records: Array<Record<string, unknown>> = data.slice(1).map((row) => {
+            const obj: Record<string, unknown> = {};
             headers.forEach((header, index) => {
-                obj[header] = row[index];
+                obj[header] = (row as unknown[])[index];
             });
             return obj;
         });
 
         // Calculate statistics for numeric columns
-        const statistics: Record<string, any> = {};
+        const statistics: Record<string, { mean?: number; min?: number; max?: number; count: number }> = {};
         const dataTypes: Record<string, string> = {};
 
         headers.forEach(header => {
@@ -81,12 +84,13 @@ async function getStructureDetails(fieldName: string, structureName: string): Pr
             
             if (numericValues.length > values.length * 0.8) { // If >80% are numeric
                 dataTypes[header] = 'number';
-                statistics[header] = {
-                    mean: numericValues.length > 0 ? numericValues.reduce((a, b) => a + b, 0) / numericValues.length : null,
-                    min: numericValues.length > 0 ? Math.min(...numericValues) : null,
-                    max: numericValues.length > 0 ? Math.max(...numericValues) : null,
-                    count: numericValues.length
-                };
+                const entry: { mean?: number; min?: number; max?: number; count: number } = { count: numericValues.length };
+                if (numericValues.length > 0) {
+                    entry.mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+                    entry.min = Math.min(...numericValues);
+                    entry.max = Math.max(...numericValues);
+                }
+                statistics[header] = entry;
             } else {
                 dataTypes[header] = 'string';
                 statistics[header] = {
@@ -107,14 +111,15 @@ async function getStructureDetails(fieldName: string, structureName: string): Pr
             total_records: records.length,
             columns: headers,
             statistics,
-            sample_data: sampleData,
+            sample_data: sampleData as Array<Record<string, unknown>>,
             data_types: dataTypes
         };
 
         return structureDetails;
 
-    } catch (e: any) {
-        throw new Error(`Error reading structure file: ${e.message}`);
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        throw new Error(`Error reading structure file: ${message}`);
     }
 }
 
@@ -125,7 +130,8 @@ export async function GET(
     try {
         const data = await getStructureDetails(params.fieldName, params.structureName);
         return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({ error: message }, { status: 404 });
     }
 }

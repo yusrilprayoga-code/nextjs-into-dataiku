@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs/promises';
 import * as xlsx from 'xlsx';
 
+export const dynamic = 'force-static';
+export const revalidate = 0;
+
 interface Structure {
     structure_name: string;
     file_path: string;
@@ -10,7 +13,7 @@ interface Structure {
     wells_count: number;
     total_records: number;
     columns: string[];
-    sample_data: any[];
+    sample_data: Array<Record<string, unknown>>;
     error?: string;
 }
 
@@ -28,7 +31,7 @@ async function getFieldDetails(fieldName: string): Promise<FieldDetails> {
     
     try {
         await fs.access(fieldPath);
-    } catch (error) {
+    } catch {
         throw new Error(`Field not found: ${fieldName}`);
     }
 
@@ -54,7 +57,7 @@ async function getFieldDetails(fieldName: string): Promise<FieldDetails> {
             const workbook = xlsx.read(file, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const data: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+            const data: unknown[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
             if (data.length === 0) {
                 fieldDetails.structures.push({
@@ -84,10 +87,10 @@ async function getFieldDetails(fieldName: string): Promise<FieldDetails> {
             }
 
             // Get sample data (first 5 rows)
-            const sampleData = data.slice(1, 6).map(row => {
-                const obj: any = {};
+            const sampleData: Array<Record<string, unknown>> = data.slice(1, 6).map((row) => {
+                const obj: Record<string, unknown> = {};
                 headers.forEach((header, index) => {
-                    obj[header] = row[index];
+                    obj[header] = (row as unknown[])[index];
                 });
                 return obj;
             });
@@ -105,8 +108,9 @@ async function getFieldDetails(fieldName: string): Promise<FieldDetails> {
             fieldDetails.structures.push(structureInfo);
             fieldDetails.total_records += data.length - 1;
 
-        } catch (e: any) {
-            console.error(`Error reading ${structurePath}: ${e.message}`);
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            console.error(`Error reading ${structurePath}: ${message}`);
             fieldDetails.structures.push({
                 structure_name: structureName,
                 file_path: structurePath,
@@ -115,7 +119,7 @@ async function getFieldDetails(fieldName: string): Promise<FieldDetails> {
                 total_records: 0,
                 columns: [],
                 sample_data: [],
-                error: e.message
+                error: message
             });
         }
     }
@@ -133,7 +137,8 @@ export async function GET(
     try {
         const data = await getFieldDetails(params.fieldName);
         return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({ error: message }, { status: 404 });
     }
 }
